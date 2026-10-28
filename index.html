@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>בדיחה בלחיצה</title>
   <meta name="description" content="כותבים נושא, לוחצים, וצוחקים.">
+  <meta name="theme-color" content="#FFE15A">
+  <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Playpen+Sans+Hebrew:wght@500&display=swap" rel="stylesheet">
@@ -246,7 +249,11 @@
     const mascot = document.getElementById("mascot");
     const message = document.getElementById("message");
 
-    const GENERIC_ERROR = "משהו השתבש. נסו שוב.";
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch((error) => console.error(error));
+    }
+
+    const GENERIC_ERROR ="משהו השתבש. נסו שוב.";
 
     function setState(state, text, buttonLabel) {
       bubble.dataset.state = state;
