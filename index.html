@@ -171,9 +171,39 @@
     .bubble[data-state="error"] { background: var(--error-bg); }
     .bubble[data-state="error"] .message { color: var(--error); font-weight: 600; }
 
+    .bubble[data-state="think"] .mascot { animation: squish 0.5s ease-in-out infinite; }
+
+    .bubble[data-state="joke"] { align-items: stretch; justify-content: flex-start; padding-top: 44px; }
+    .bubble[data-state="joke"] .mascot {
+      position: absolute;
+      top: -26px;
+      right: -14px;
+      width: 86px;
+      transform: rotate(8deg);
+      animation: roll 0.35s ease-in-out 4;
+    }
+
+    .bubble[data-state="error"] .mascot { animation: wobble 0.6s ease-in-out 2; }
+
     @keyframes bounce {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-5px); }
+    }
+
+    @keyframes squish {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(0.86); }
+    }
+
+    @keyframes roll {
+      0%, 100% { transform: rotate(8deg); }
+      50% { transform: rotate(-8deg); }
+    }
+
+    @keyframes wobble {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-8deg); }
+      75% { transform: rotate(8deg); }
     }
 
     footer {
@@ -213,14 +243,25 @@
     const input = document.getElementById("topic");
     const button = document.getElementById("go");
     const bubble = document.getElementById("bubble");
+    const mascot = document.getElementById("mascot");
     const message = document.getElementById("message");
+
+    const GENERIC_ERROR = "משהו השתבש. נסו שוב.";
+
+    function setState(state, text, buttonLabel) {
+      bubble.dataset.state = state;
+      mascot.src = `assets/mascot-${state}.svg`;
+      message.textContent = text;
+      if (buttonLabel) button.textContent = buttonLabel;
+    }
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (button.disabled) return;
       const topic = input.value.trim();
 
       button.disabled = true;
-      button.textContent = "חושב...";
+      setState("think", topic ? `מחפש בדיחה על ${topic}...` : "מחפש בדיחה...", "חושב...");
 
       try {
         const response = await fetch("/api/joke", {
@@ -228,17 +269,17 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic }),
         });
-        const data = await response.json();
-        if (!response.ok || !data.joke) throw new Error(data.error || "אין תשובה");
-        bubble.dataset.state = "joke";
-        message.textContent = data.joke;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.joke) {
+          setState("error", data.error || GENERIC_ERROR, "לנסות שוב");
+        } else {
+          setState("joke", data.joke, "עוד בדיחה!");
+        }
       } catch (error) {
-        bubble.dataset.state = "error";
-        message.textContent = "משהו השתבש. נסו שוב.";
         console.error(error);
+        setState("error", GENERIC_ERROR, "לנסות שוב");
       } finally {
         button.disabled = false;
-        button.textContent = "תנו לי בדיחה!";
       }
     });
   </script>
