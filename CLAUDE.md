@@ -4,6 +4,7 @@
 
 ## הפרויקט
 - אפליקציית "בדיחה בלחיצה": כותבים נושא ומקבלים בדיחה מ-GPT-5, דרך פונקציה ב-Vercel.
+- שמירה: Supabase. רק הפונקציות בתיקיית `api` מדברות איתו, דרך לקוח אחד ב-`lib/supabase.js`. הדף מדבר רק עם `/api`, ואין בו כתובת או מפתח של Supabase.
 - האפליקציה בעברית, מימין לשמאל (`lang="he"`, `dir="rtl"`).
 - מסמכי הספק נמצאים ב-`spec/`, והם מקור האמת: PRD.md, MVP.md, MILESTONES.md, ARCHITECTURE.md, DESIGN.md, tech-stack.md, product-10-definitions.md ו-course-stack.md, וגם תמונות הייחוס (wireframes, mockups, style-guide).
 - `assets/` נשארת בשורש, כי האפליקציה משתמשת בה. משתמשים בקבצים כמו שהם.
@@ -16,10 +17,10 @@
 ## מפתחות: חוק ברזל
 - לא מבקשים ממני אף מפתח.
 - לא כותבים מפתח ולא קוראים מפתח, באף קובץ.
-- את מפתח ה-production אני שומר/ת ב-Vercel (Secret, בסביבות Production ו-Preview).
-- את מפתח ה-dev אני מדביק/ה בעצמי ב-`.env.local`.
+- את מפתח ה-production אני שומר/ת ב-Vercel (Secret, בסביבות Production ו-Preview). כך גם את `SUPABASE_SECRET_KEY` (Secret) ואת `SUPABASE_URL` (Config).
+- את מפתח ה-dev, ואת משתני Supabase להרצה מקומית, אני מדביק/ה בעצמי ב-`.env.local`.
 - `.claude/settings.json` חוסם קריאה של `.env` ושל `.env.*`. אסור לעקוף את החסימה.
-- `.env.example` מכיל רק את השורה `OPENAI_API_KEY=`, בלי ערך ובלי הערות.
+- `.env.example` מכיל רק שתי שורות: `OPENAI_API_KEY=` ו-`SUPABASE_SECRET_KEY=`, בלי ערכים ובלי הערות.
 - `.gitignore` מתעלם מ-`.env`, מ-`.env.*` (עם החריגה `!.env.example`), מ-`.vercel` ומ-`node_modules`. לפני כל commit בודקים ששלושת הקבצים האלה קיימים.
 
 ## Git, GitHub ו-Vercel
@@ -42,6 +43,9 @@
 - Milestone 1: Opus, כי הוא כולל את בניית המסך לפי ה-mockups.
 
 ## החלטות שכבר התקבלו
+- Supabase: טבלה public.jokes, ‏RLS דולק בלי policy, ‏grant רק ל-service_role, ‏revoke all מ-anon ומ-authenticated. מונה הצחוקים עובר דרך הפונקציה public.add_laugh ב-rpc. לא מקבלים הצעה להוסיף policy או grant ל-anon.
+- שינויי SQL נשמרים גם בתיקיית `db/`, ומוצגים לי לפני ההרצה.
+- בכל שינוי בקבצים ש-sw.js שומר מראש, מעלים את גרסת המטמון.
 - לא יוצרים את `ai-tests.md`. לפי ARCHITECTURE.md, במקומו יש בדיקות ידניות בתנאי ההשלמה של Milestone 2.
 - `joke-app-spec.zip` נשאר במחשב ולא נכנס לריפו.
 - שאלות פתוחות לתכנון של Milestone 2 (מתוך product-10-definitions.md):

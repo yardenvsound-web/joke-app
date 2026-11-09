@@ -20,6 +20,8 @@
       --ink-soft: #4A3D6B;
       --red: #F23D2F;
       --blue: #2E9BFF;
+      --pink: #FF5FA8;
+      --mint: #1FCB8C;
       --error: #C0261B;
       --error-bg: #FFE8EC;
       --hint: #756B92;
@@ -188,6 +190,99 @@
 
     .bubble[data-state="error"] .mascot { animation: wobble 0.6s ease-in-out 2; }
 
+    .laugh {
+      align-self: flex-end;
+      font: 700 18px var(--font-ui);
+      color: var(--ink);
+      background: var(--pink);
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      padding: 6px 18px;
+      box-shadow: 0 4px 0 var(--ink);
+      transform: rotate(2deg);
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.08s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .laugh[hidden] { display: none; }
+
+    .laugh:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+
+    .laugh:active,
+    .laugh:disabled {
+      transform: rotate(2deg) translateY(3px);
+      box-shadow: 0 1px 0 var(--ink);
+    }
+
+    .laugh:disabled { cursor: default; }
+
+    .top {
+      margin-top: 12px;
+      padding: 18px 20px;
+      background: var(--paper);
+      border: 3px solid var(--ink);
+      border-radius: 22px;
+      box-shadow: 6px 6px 0 var(--ink);
+      transform: rotate(0.8deg);
+    }
+
+    .top h2 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .top ol {
+      margin: 0;
+      padding-inline-start: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .top li { font-size: 18px; font-weight: 700; }
+
+    .top-joke {
+      font-family: var(--font-joke);
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .top-meta {
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--ink-soft);
+    }
+
+    .badge {
+      flex: none;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      background: var(--mint);
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      padding: 1px 10px;
+    }
+
+    .top-empty {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--ink-soft);
+    }
+
+    .top-empty[hidden] { display: none; }
+
     @keyframes bounce {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-5px); }
@@ -236,6 +331,13 @@
     <section class="bubble" id="bubble" data-state="idle" aria-live="polite">
       <img class="mascot" id="mascot" src="assets/mascot-idle.svg" alt="" width="120" height="112">
       <p class="message" id="message">לוחצים על הכפתור, והבדיחה מופיעה כאן</p>
+      <button class="laugh" id="laugh" type="button" hidden>צחקתי · 0</button>
+    </section>
+
+    <section class="top" aria-labelledby="top-title">
+      <h2 id="top-title">הכי מצחיקות</h2>
+      <ol id="top-list"></ol>
+      <p class="top-empty" id="top-empty">טוען...</p>
     </section>
   </main>
 
@@ -254,13 +356,94 @@
     }
 
     const GENERIC_ERROR ="משהו השתבש. נסו שוב.";
+    const TOP_EMPTY = "עוד אין פה בדיחות. צחקו על אחת, והיא תופיע כאן.";
+
+    const laughButton = document.getElementById("laugh");
+    const topList = document.getElementById("top-list");
+    const topEmpty = document.getElementById("top-empty");
+    let currentId = null;
 
     function setState(state, text, buttonLabel) {
       bubble.dataset.state = state;
       mascot.src = `assets/mascot-${state}.svg`;
       message.textContent = text;
       if (buttonLabel) button.textContent = buttonLabel;
+      currentId = null;
+      laughButton.hidden = true;
     }
+
+    // כפתור "צחקתי" מופיע רק לבדיחה שנשמרה ויש לה id
+    function showLaugh(id) {
+      currentId = id || null;
+      laughButton.hidden = !currentId;
+      laughButton.disabled = false;
+      laughButton.textContent = "צחקתי · 0";
+    }
+
+    function laughsLabel(n) {
+      return n === 1 ? "צחוק אחד" : `${n} צחוקים`;
+    }
+
+    // רשימת "הכי מצחיקות": בטעינת הדף ואחרי כל צחוק. כל טקסט עם textContent.
+    async function loadTop() {
+      try {
+        const response = await fetch("/api/top");
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !Array.isArray(data.top)) throw new Error(data.error || `status ${response.status}`);
+
+        topList.replaceChildren();
+        for (const item of data.top) {
+          const li = document.createElement("li");
+          const joke = document.createElement("div");
+          joke.className = "top-joke";
+          joke.textContent = item.text;
+          const meta = document.createElement("div");
+          meta.className = "top-meta";
+          const topic = document.createElement("span");
+          topic.textContent = item.topic ? `על ${item.topic}` : "בלי נושא";
+          const badge = document.createElement("span");
+          badge.className = "badge";
+          badge.textContent = laughsLabel(item.laughs);
+          meta.append(topic, badge);
+          li.append(joke, meta);
+          topList.append(li);
+        }
+        topEmpty.hidden = data.top.length > 0;
+        topEmpty.textContent = TOP_EMPTY;
+      } catch (error) {
+        console.error(error);
+        if (!topList.children.length) {
+          topEmpty.hidden = false;
+          topEmpty.textContent = "לא הצלחנו לטעון את הרשימה.";
+        }
+      }
+    }
+
+    laughButton.addEventListener("click", async () => {
+      if (laughButton.disabled || !currentId) return;
+      const id = currentId;
+      laughButton.disabled = true;
+
+      try {
+        const response = await fetch("/api/laugh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || typeof data.laughs !== "number") throw new Error(data.error || `status ${response.status}`);
+        if (currentId === id) laughButton.textContent = `צחקתי! · ${data.laughs}`;
+        loadTop();
+      } catch (error) {
+        console.error(error);
+        if (currentId === id) {
+          laughButton.disabled = false;
+          laughButton.textContent = "לא הצליח, שוב?";
+        }
+      }
+    });
+
+    loadTop();
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -281,6 +464,7 @@
           setState("error", data.error || GENERIC_ERROR, "לנסות שוב");
         } else {
           setState("joke", data.joke, "עוד בדיחה!");
+          showLaugh(data.id);
         }
       } catch (error) {
         console.error(error);

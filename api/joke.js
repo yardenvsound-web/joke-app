@@ -1,4 +1,5 @@
-// הפונקציה היחידה בשרת. הדפדפן פונה רק אליה, והיא פונה ל-OpenAI עם המפתח מהסביבה.
+// בדיחה מ-OpenAI, עם המפתח מהסביבה, ושמירה שלה בטבלה public.jokes.
+import { supabase } from "../lib/supabase.js";
 
 const INSTRUCTIONS =
   "אתה כותב בדיחות קצרות בעברית. כתוב בדיחה אחת בלבד, עד ארבעה משפטים, נקייה ומתאימה לכל גיל. בלי הקדמה, בלי הסבר ובלי אימוג׳י. רק הבדיחה.";
@@ -40,6 +41,29 @@ function extractJoke(data) {
   }
   const text = parts.join("").trim();
   return text ? { text } : { refused };
+}
+
+// שומרת את הבדיחה ומחזירה את ה-id. כל כישלון: null, והבדיחה עדיין מגיעה למשתמש.
+async function saveJoke(topic, text) {
+  if (!supabase) {
+    console.error("joke not saved: Supabase is not configured");
+    return null;
+  }
+  try {
+    const { data, error } = await supabase
+      .from("jokes")
+      .insert({ topic, text })
+      .select("id")
+      .single();
+    if (error) {
+      console.error(`joke not saved: code=${error.code} message=${error.message}`);
+      return null;
+    }
+    return data?.id ?? null;
+  } catch (error) {
+    console.error("joke not saved:", error?.message || error);
+    return null;
+  }
 }
 
 export default {
@@ -96,7 +120,8 @@ export default {
         return json({ error: refused ? REFUSAL_ERROR : GENERIC_ERROR }, 502);
       }
 
-      return json({ joke: text });
+      const id = await saveJoke(topic, text);
+      return json(id ? { joke: text, id } : { joke: text });
     } catch (error) {
       console.error("OpenAI request failed:", error?.message || error);
       return json({ error: GENERIC_ERROR }, 502);

@@ -1,7 +1,7 @@
 # MILESTONES: בדיחה בלחיצה
 כלל: בסוף כל Milestone ה-AI עוצר, וממתין לבדיקה ולאישור מפורש שלי לפני שהוא ממשיך.
 
-שלושה Milestones, כשעתיים בסך הכל. את המפתחות של OpenAI אף פעם לא נותנים ל-Claude: מפתח ה-production עובר ישר מ-OpenAI ל-Vercel, ומפתח ה-dev מודבק ביד ב-.env.local.
+ארבעה Milestones. שלושת הראשונים, כשעתיים בסך הכל. הרביעי מוסיף זיכרון ב-Supabase. את המפתחות של OpenAI אף פעם לא נותנים ל-Claude: מפתח ה-production עובר ישר מ-OpenAI ל-Vercel, ומפתח ה-dev מודבק ביד ב-.env.local.
 
 איפה מריצים: הבחירה שלי. אפשר לבדוק כל Milestone בכתובת של Vercel אחרי push, ואפשר גם להריץ במחשב עם vercel dev. הקוד זהה בשני המקרים.
 
@@ -69,3 +69,52 @@
   3. בתוך האפליקציה המותקנת מגיעה בדיחה חדשה בכל לחיצה.
   4. ב-Application ואז Cache Storage אין אף כתובת של /api.
   5. שינוי קטן בטקסט, push, ורענון: השינוי מופיע.
+
+## Milestone 4: האפליקציה זוכרת
+- המטרה: כל בדיחת AI נשמרת ב-Supabase, אפשר לצחוק עליה, ויש רשימת "הכי מצחיקות". רק הפונקציות בתיקיית api מדברות עם Supabase. הדף מדבר רק עם /api.
+- מה רואים בדף:
+  - מתחת לכל בדיחת AI: כפתור "צחקתי" עם מונה. אחרי לחיצה הכפתור ננעל.
+  - רשימת "הכי מצחיקות": חמש הבדיחות עם הכי הרבה צחוקים, רק כאלה עם צחוק אחד לפחות. היא מתעדכנת אחרי כל צחוק, בלי polling.
+  - כל טקסט שמגיע מהנתונים מוצג עם textContent.
+- הטבלה, דרך המחבר של Supabase:
+  - אם יש יותר מפרויקט אחד, Claude שואל באיזה לעבוד.
+  - migration בשם create_jokes, עם הטבלה public.jokes ובה חמש עמודות:
+    - id: uuid, מפתח ראשי, ברירת מחדל gen_random_uuid().
+    - created_at: timestamptz, ברירת מחדל now().
+    - topic: text.
+    - text: text, חובה.
+    - laughs: integer, חובה, ברירת מחדל 0.
+- הנעילה, כדי שרק השרת ייגש לטבלה:
+  - RLS דולק, בלי אף policy.
+  - grant select, insert, update על הטבלה ל-service_role בלבד.
+  - revoke all מ-anon ומ-authenticated.
+- ספירת הצחוקים, כדי ששתי לחיצות באותו רגע לא ידרסו זו את זו:
+  - פונקציה public.add_laugh(joke_id uuid): מוסיפה 1 למונה בעדכון אחד, ומחזירה את המספר החדש.
+  - בתוכה: security invoker, ‏search_path ריק, ושמות מלאים כמו public.jokes.
+  - הרשאות: revoke execute מ-public, מ-anon ומ-authenticated, ו-grant execute ל-service_role.
+- עצירה ראשונה, סביב ה-SQL:
+  - ה-SQL נשמר גם בקובץ db/create_jokes.sql, ומוצג לי לפני ההרצה.
+  - אחרי ההרצה Claude מריץ get_advisors, מסביר בעברית מה נמצא, ועוצר. אני בודק/ת שהטבלה נעולה.
+- הקוד בשרת:
+  - לקוח אחד בקובץ lib/supabase.js, מהחבילה @supabase/supabase-js, ב-dependencies של package.json. הכתובת מ-`process.env.SUPABASE_URL`, והמפתח מ-`process.env.SUPABASE_SECRET_KEY`.
+  - api/joke.js שומרת כל בדיחת AI בטבלה, ומחזירה `{ "joke": "...", "id": "..." }`. אם השמירה נכשלת, הבדיחה עדיין מגיעה למשתמש, בלי id, והשגיאה נרשמת ב-console.error.
+  - api/laugh.js מקבלת רק POST עם `{ "id": "..." }`, בודקת שזה uuid, וקוראת ל-add_laugh דרך rpc. מחזירה `{ "laughs": N }`.
+  - api/top.js מחזירה `{ "top": [...] }`: עד חמש בדיחות עם laughs גדול מ-0, מהגבוה לנמוך.
+  - sw.js: מעלים את גרסת המטמון. בקשות ל-/api ממשיכות לא להישמר.
+- ביד, לפני הדחיפה:
+  - ב-Vercel, ב-Environment Variables, בסביבות Production ו-Preview: `SUPABASE_URL` מסוג Config, ו-`SUPABASE_SECRET_KEY` מסוג Secret. את המפתח אני מעתיק/ה ישר מ-Supabase ל-Vercel. Claude לא מבקש אותו.
+  - הרצה מקומית, רשות: מוסיפים ל-.env.local את שני המשתנים, ביד.
+- עצירה שנייה: Claude עוצר לפני הדחיפה, עד שהמפתח שמור ב-Vercel.
+- התוצר המצופה: בדיחה עם כפתור "צחקתי", ורשימה של הבדיחות שהכי הצחיקו.
+- תנאי השלמה (Definition of Done):
+  1. ב-Supabase יש את הטבלה public.jokes עם חמש העמודות, ו-RLS דולק בלי אף policy.
+  2. get_advisors לא מראה בעיית אבטחה בטבלה או בפונקציה. הצעה להוסיף policy או grant ל-anon לא מתקבלת.
+  3. בקשה ישירה לטבלה עם המפתח הציבורי (anon או publishable) נכשלת או מחזירה רשימה ריקה.
+  4. כל בדיחת AI מופיעה כשורה חדשה בטבלה, עם הנושא והטקסט.
+  5. לחיצה על "צחקתי" מעלה את המונה ב-1, והכפתור ננעל.
+  6. בדיחה עם צחוק אחד לפחות מופיעה ב"הכי מצחיקות" מיד אחרי הלחיצה. ברשימה עד חמש בדיחות, מהגבוהה לנמוכה, ואין בה בדיחה עם 0.
+  7. POST ל-/api/laugh עם id שאינו uuid מחזיר שגיאה, ולא נוגע בטבלה.
+  8. בלשונית Network יש בקשות רק ל-/api/joke, ‏/api/laugh ו-/api/top. אין בקשה ל-supabase.co.
+  9. חיפוש בקוד הדף (Ctrl+U ואז Ctrl+F) על `supabase` ועל `sb_secret` לא מוצא כלום.
+  10. אם Supabase לא זמין, למשל כש-SUPABASE_SECRET_KEY חסר, עדיין מגיעה בדיחה, וב-Logs יש שורה אדומה.
+  11. בריפו יש db/create_jokes.sql, ו-.env.example מכיל רק OPENAI_API_KEY= ו-SUPABASE_SECRET_KEY=, בלי ערכים.
