@@ -127,3 +127,16 @@ DESIGN.md לא מתאר את שני הרכיבים החדשים. ההצעה:
   - נבדק: ל-service_role יש רק insert, ‏select ו-update. ל-anon ול-authenticated אין כלום.
   - get_advisors שוב: רק אותו ממצא INFO.
 - עוד לא נבדק מול Supabase אמיתי מהפונקציות. זה יקרה אחרי ה-SQL ואחרי שהמשתנים יישמרו ב-Vercel.
+
+## הרצה
+- ב-Vercel נבדקו השמות והסביבות בלבד, בלי ערכים: ‏`SUPABASE_URL` (Config) ו-`SUPABASE_SECRET_KEY` (Secret), ב-Production וב-Preview.
+- לפני הקומיט: `.gitignore`, ‏`.env.example` ו-`.claude/settings.json` קיימים. הגודל של `.env.example` הוא 37 בתים, בדיוק שתי השורות בלי ערכים (נבדק בלי לפתוח אותו). `pass.txt` ו-`joke-app-spec.zip` לא נכנסו.
+- נדחף בקומיט f357148, והפריסה ב-Vercel מוכנה: https://joke-app-one-sigma.vercel.app
+- נבדק מול האתר החי:
+  - laugh עם `abc`: ‏400. עם uuid שלא קיים: ‏404.
+  - joke על "חתולים": בדיחה עם id. השורה נשמרה בטבלה, עם הנושא והטקסט.
+  - laugh על ה-id: ‏`{ "laughs": 1 }`, והבדיחה הופיעה מיד ב-top.
+  - בקוד הדף אין `supabase` ואין `sb_secret`.
+- נבדק במסד, בתפקיד anon (התפקיד של המפתח הציבורי): קריאה מהטבלה ו-add_laugh נכשלות עם permission denied. ההצעה של Postgres להוסיף grant ל-anon לא מתקבלת.
+- בטבלה נשארה בדיחת הבדיקה על חתולים, עם צחוק אחד.
+- עוד לבדיקה שלך: הכפתור והרשימה בטלפון, לשונית Network, ותנאי 10 (בלי SUPABASE_SECRET_KEY).
