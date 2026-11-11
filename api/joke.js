@@ -1,18 +1,13 @@
 // בדיחה מ-OpenAI, עם המפתח מהסביבה, ושמירה שלה בטבלה public.jokes.
-import { supabase } from "../lib/supabase.js";
+// משתמש מחובר מזוהה רק לפי הטוקן, והבדיחה נשמרת עם השם שלו.
+import { supabase, hasToken, getUserFromRequest, displayName } from "../lib/supabase.js";
+import { json, authRequired, readJson } from "../lib/http.js";
 
 const INSTRUCTIONS =
   "אתה כותב בדיחות קצרות בעברית. כתוב בדיחה אחת בלבד, עד ארבעה משפטים, נקייה ומתאימה לכל גיל. בלי הקדמה, בלי הסבר ובלי אימוג׳י. רק הבדיחה.";
 
 const GENERIC_ERROR = "משהו השתבש. נסו שוב.";
 const REFUSAL_ERROR = "על הנושא הזה אין לי בדיחה. נסו נושא אחר.";
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-  });
-}
 
 // הודעה בעברית לפי השגיאה שחזרה מ-OpenAI
 function messageForError(status, code) {
@@ -44,7 +39,7 @@ function extractJoke(data) {
 }
 
 // שומרת את הבדיחה ומחזירה את ה-id. כל כישלון: null, והבדיחה עדיין מגיעה למשתמש.
-async function saveJoke(topic, text) {
+async function saveJoke(topic, text, user) {
   if (!supabase) {
     console.error("joke not saved: Supabase is not configured");
     return null;
@@ -52,7 +47,12 @@ async function saveJoke(topic, text) {
   try {
     const { data, error } = await supabase
       .from("jokes")
-      .insert({ topic, text })
+      .insert({
+        topic,
+        text,
+        user_id: user ? user.id : null,
+        author_name: user ? displayName(user) : null,
+      })
       .select("id")
       .single();
     if (error) {
@@ -72,12 +72,22 @@ export default {
       return json({ error: "אפשר לבקש בדיחה רק בלחיצה על הכפתור." }, 405);
     }
 
-    let topic = "";
-    try {
-      const body = await request.json();
-      if (typeof body?.topic === "string") topic = body.topic.trim().slice(0, 100);
-    } catch {
-      // גוף שבור: ממשיכים בלי נושא
+    // גוף שבור או גדול מדי: ממשיכים בלי נושא
+    const body = await readJson(request);
+    const topic = typeof body?.topic === "string" ? body.topic.trim().slice(0, 100) : "";
+
+    // מי שואל: לפני OpenAI, כדי שטוקן רע לא יעלה כסף.
+    // Supabase לא זמין: הבדיחה מגיעה, אבל לא נשמרת, כי לא ידוע מי כתב אותה.
+    let user = null;
+    let canSave = true;
+    if (hasToken(request)) {
+      try {
+        user = await getUserFromRequest(request, supabase);
+        if (!user) return authRequired();
+      } catch (error) {
+        console.error("joke: auth check failed, not saving:", error?.message || error);
+        canSave = false;
+      }
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -88,7 +98,7 @@ export default {
       return json({ error: GENERIC_ERROR }, 500);
     }
 
-    console.log(`joke request: topic="${topic}" model=${model}`);
+    console.log(`joke request: topic="${topic}" model=${model} user=${user ? user.id : "guest"}`);
 
     try {
       const response = await fetch("https://api.openai.com/v1/responses", {
@@ -120,8 +130,9 @@ export default {
         return json({ error: refused ? REFUSAL_ERROR : GENERIC_ERROR }, 502);
       }
 
-      const id = await saveJoke(topic, text);
-      return json(id ? { joke: text, id } : { joke: text });
+      const authorName = user ? displayName(user) : null;
+      const id = canSave ? await saveJoke(topic, text, user) : null;
+      return json(id ? { joke: text, id, author_name: authorName } : { joke: text, author_name: authorName });
     } catch (error) {
       console.error("OpenAI request failed:", error?.message || error);
       return json({ error: GENERIC_ERROR }, 502);

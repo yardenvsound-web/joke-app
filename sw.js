@@ -1,8 +1,9 @@
-const CACHE = "joke-v2";
+const CACHE = "joke-v3";
 
 const PRECACHE = [
   "/",
   "/manifest.webmanifest",
+  "/auth.js",
   "/assets/logo.svg",
   "/assets/mascot-idle.svg",
   "/assets/mascot-think.svg",
