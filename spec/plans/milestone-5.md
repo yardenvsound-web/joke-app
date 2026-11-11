@@ -170,3 +170,7 @@ create index jokes_user_id_idx on public.jokes (user_id);
   - בקוד הדף וב-auth.js אין sb_publishable_, ‏sb_secret_ או supabase.co. ‏sw.js בגרסה joke-v3.
   - בדפדפן: הספרייה נטענה מ-jsDelivr ועברה את בדיקת ה-integrity. ‏Auth מוכן, ובטעינה אין אף בקשה ל-supabase.co.
 - עוד לבדיקה שלך: תנאים 2 עד 8, עם הרשמה אמיתית.
+
+## סגירה
+- תנאי ההשלמה 2 עד 8 נבדקו על ידי המשתמש/ת באתר החי, והמיילסטון אושר במפורש.
+- Milestone 5 הושלם. הבא בתור: Milestone 6, בשיחה חדשה בשם milestone-6.
