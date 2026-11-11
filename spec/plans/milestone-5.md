@@ -160,4 +160,13 @@ create index jokes_user_id_idx on public.jokes (user_id);
 - עוד לא נבדק מול Supabase אמיתי: הרשמה, כניסה, טוקן לא מוכר ומחיקה. זה יקרה אחרי ה-SQL ואחרי `SUPABASE_PUBLISHABLE_KEY` ב-Vercel.
 
 ## הרצה
-(יתמלא בשלב ההרצה)
+- בחרת לבדוק ב-Vercel. לכן הקוד נדחף ל-main לפני הבדיקה שלך (כמו ב-Milestone 4), בקומיט 2dad471.
+- לפני הקומיט: `.gitignore`, ‏`.env.example` (‏37 בתים) ו-`.claude/settings.json` קיימים. הקבצים נוספו בשמם. `pass.txt` לא מוחרג ב-`.gitignore`, ולכן לא נכנס. `joke-app-spec.zip` מוחרג.
+- נבדק מול האתר החי, https://joke-app-one-sigma.vercel.app:
+  - ‏/api/config: ‏200, עם הכתובת ומפתח שמתחיל ב-sb_publishable_. כלומר `SUPABASE_PUBLISHABLE_KEY` שמור ב-Vercel. ‏POST: ‏405.
+  - ‏/api/joke עם טוקן מזויף: ‏401 עם auth_required, בלי בדיחה.
+  - ‏/api/delete-account בלי טוקן ועם טוקן מזויף: ‏401 עם auth_required.
+  - בדיחת אורח על "פינגווינים": ‏`author_name: null`, והשורה בטבלה בלי user_id ובלי author_name (תנאי 1).
+  - בקוד הדף וב-auth.js אין sb_publishable_, ‏sb_secret_ או supabase.co. ‏sw.js בגרסה joke-v3.
+  - בדפדפן: הספרייה נטענה מ-jsDelivr ועברה את בדיקת ה-integrity. ‏Auth מוכן, ובטעינה אין אף בקשה ל-supabase.co.
+- עוד לבדיקה שלך: תנאים 2 עד 8, עם הרשמה אמיתית.
