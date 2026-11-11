@@ -242,4 +242,14 @@ grant  execute on function public.joke_feed(uuid, text, integer) to service_role
 - עוד לא נבדק מול Supabase אמיתי: הצבעה של משתמש מחובר, ההצבעה שנשלחת אחרי כניסה, ורשימת אהבתי של מחובר. זה יקרה בשלב ההרצה.
 
 ## הרצה
-(יתועד כאן בשלב ההרצה.)
+- בחרת לבדוק ב-Vercel. לכן הקוד נדחף ל-main לפני הבדיקה שלך, בקומיט 6a86385.
+- לפני הקומיט: `.gitignore`, ‏`.env.example` ו-`.claude/settings.json` קיימים, ו-`.env.example` לא השתנה. הקבצים נוספו בשמם, ו-`pass.txt` לא נכנס.
+- נבדק מול האתר החי, https://joke-app-one-sigma.vercel.app:
+  - ‏sw.js בגרסה joke-v4.
+  - feed לאורח: ‏new מחזיר 200 עם 14 בדיחות. בכל אחת רק id, ‏topic, ‏text, ‏author_name, ‏likes, ‏dislikes, ‏my_vote ו-created_at, בלי user_id. ‏top מחזיר רשימה ריקה (אין עדיין הצבעות). ‏Cache-Control: no-store.
+  - feed: ‏liked בלי טוקן ‏401, ‏mode לא מוכר ‏400, טוקן מזויף ‏401 עם auth_required.
+  - vote: בלי טוקן ‏401, טוקן מזויף ‏401, ‏value של 5 ‏400.
+  - ‏/api/laugh ו-/api/top: ‏404, כלומר נמחקו.
+  - בקוד הדף אין sb_publishable_ ואין sb_secret_.
+  - בדפדפן: לשונית הקהילה נטענת עם 14 כרטיסים, ‏Auth מוכן, אין אף בקשה ל-/rest/v1, ואין שגיאות ב-Console.
+- עוד לבדיקה שלך: תנאים 1 עד 9, עם משתמשים אמיתיים (נועה ודניאל).
